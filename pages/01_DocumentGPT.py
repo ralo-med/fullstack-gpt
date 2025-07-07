@@ -6,6 +6,9 @@ from langchain.storage import LocalFileStore
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores.faiss import FAISS
 import streamlit as st
+from langchain.prompts import ChatPromptTemplate
+from langchain.schema.runnable import RunnableLambda, RunnablePassthrough
+from langchain.chat_models import ChatOpenAI
 
 st.set_page_config(
     page_title="Document GPT",
@@ -13,6 +16,7 @@ st.set_page_config(
     layout="wide",
 )
 
+llm = ChatOpenAI(model="gpt-4.1-nano", temperature=0.1)
 
 @st.cache_data(show_spinner="Embedding file..." )
 def embed_file(file):
@@ -92,6 +96,13 @@ def paint_history():
     for message in st.session_state["messages"]:
         send_message(message["message"], message["role"], save=False)
 
+prompt = ChatPromptTemplate.from_messages([
+    ("system", """You are a helpful assistant that can answer questions about the documents you are given. If you don't know the answer, just say that you don't know. Do not make up an answer. Always answer in Korean.
+    Context: {context}""",),
+
+    ("user", "{question}"),
+])
+
 if file:
     retriever = embed_file(file)
     
@@ -103,9 +114,12 @@ if file:
         message = st.chat_input("Ask me anything!")
         if message:
             send_message(message, "human")
-            results = retriever.invoke(message)
-            send_message(results, "ai")
-   
+            chain = {
+                "context": retriever|RunnableLambda(lambda x: "\n\n".join([doc.page_content for doc in x])),
+                "question": RunnablePassthrough()
+            } | prompt | llm 
+            response = chain.invoke( message)
+            send_message(response.content, "ai")
     else:
         st.warning("파일 처리를 완료할 수 없습니다. 위의 오류 메시지를 확인해주세요.")
 
