@@ -13,7 +13,8 @@ st.set_page_config(
     layout="wide",
 )
 
-@st.cache_data
+
+@st.cache_data(show_spinner="Embedding file..." )
 def embed_file(file):
     try:
         # OpenAI API 키 확인
@@ -70,13 +71,26 @@ st.markdown(
 Welcome!
             
 Use this chatbot to ask questions to an AI about your files!
+
+Upload a file on the sidebar to get started!
 """
 )
 
-file = st.file_uploader(
-    "Upload a .txt .pdf or .docx file",
-    type=["pdf", "txt", "docx"],
+with st.sidebar:
+    file = st.file_uploader(
+        "Upload a .txt .pdf or .docx file",
+        type=["pdf", "txt", "docx"],
 )
+
+def send_message(message, role, save=True):
+    with st.chat_message(role):
+        st.markdown(message)
+    if save:
+        st.session_state["messages"].append({"role": role, "message": message})
+
+def paint_history():
+    for message in st.session_state["messages"]:
+        send_message(message["message"], message["role"], save=False)
 
 if file:
     retriever = embed_file(file)
@@ -84,20 +98,16 @@ if file:
     if retriever:
         st.success("🎉 파일이 성공적으로 처리되었습니다!")
         
-        # 테스트 쿼리
-        test_query = st.text_input("질문을 입력하세요:", value="이 문서의 주요 내용은 무엇인가요?")
-        
-        if st.button("질문하기"):
-            with st.spinner("🤔 답변을 생성하는 중..."):
-                try:
-                    results = retriever.get_relevant_documents(test_query)
-                    st.write("관련 문서 청크:")
-                    for i, doc in enumerate(results[:3]):  # 상위 3개만 표시
-                        st.write(f"**청크 {i+1}:**")
-                        st.write(doc.page_content[:200] + "...")
-                except Exception as e:
-                    st.error(f"질문 처리 중 오류가 발생했습니다: {str(e)}")
+        send_message("I'm ready to answer your questions!", "ai", save=False)
+        paint_history()
+        message = st.chat_input("Ask me anything!")
+        if message:
+            send_message(message, "human")
+            results = retriever.invoke(message)
+            send_message(results, "ai")
+   
     else:
         st.warning("파일 처리를 완료할 수 없습니다. 위의 오류 메시지를 확인해주세요.")
 
-
+else:
+    st.session_state["messages"] = []
