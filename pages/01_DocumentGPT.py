@@ -9,6 +9,7 @@ import streamlit as st
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema.runnable import RunnableLambda, RunnablePassthrough
 from langchain.chat_models import ChatOpenAI
+from langchain.callbacks.base import BaseCallbackHandler
 
 st.set_page_config(
     page_title="Document GPT",
@@ -16,7 +17,27 @@ st.set_page_config(
     layout="wide",
 )
 
-llm = ChatOpenAI(model="gpt-4.1-nano", temperature=0.1)
+
+class ChatCallbackHandler(BaseCallbackHandler):
+
+    def __init__(self):
+        self.message = ""
+        self.message_box = None
+
+    def on_llm_start(self, *args, **kwargs):
+        self.message = ""
+        self.message_box = st.empty()
+        
+    def on_llm_end(self, *args, **kwargs):
+        save_message(self.message, "ai")
+
+    def on_llm_new_token(self, token: str, **kwargs):
+        self.message += token
+        if self.message_box is not None:
+            self.message_box.markdown(self.message)
+
+llm = ChatOpenAI(model="gpt-4.1-nano", temperature=0.1, streaming=True, callbacks=[ChatCallbackHandler()])
+
 
 @st.cache_data(show_spinner="Embedding file..." )
 def embed_file(file):
@@ -90,7 +111,10 @@ def send_message(message, role, save=True):
     with st.chat_message(role):
         st.markdown(message)
     if save:
-        st.session_state["messages"].append({"role": role, "message": message})
+        save_message(message, role)
+
+def save_message(message, role):
+    st.session_state["messages"].append({"role": role, "message": message})
 
 def paint_history():
     for message in st.session_state["messages"]:
@@ -118,8 +142,10 @@ if file:
                 "context": retriever|RunnableLambda(lambda x: "\n\n".join([doc.page_content for doc in x])),
                 "question": RunnablePassthrough()
             } | prompt | llm 
-            response = chain.invoke( message)
-            send_message(response.content, "ai")
+            with st.chat_message("ai"):
+                response = chain.invoke( message)
+                
+           
     else:
         st.warning("파일 처리를 완료할 수 없습니다. 위의 오류 메시지를 확인해주세요.")
 
