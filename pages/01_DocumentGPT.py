@@ -80,12 +80,10 @@ except Exception:
 @st.cache_data(show_spinner="Embedding file..." )
 def embed_file(file):
     try:
-        # OpenAI API 키 확인
         if not os.getenv("OPENAI_API_KEY"):
             st.error("❌ OPENAI_API_KEY 환경변수가 설정되지 않았습니다!")
             return None
         
-        # 디렉토리 생성
         os.makedirs("./.cache/files", exist_ok=True)
         os.makedirs("./.cache/embeddings", exist_ok=True)
         
@@ -140,7 +138,6 @@ with st.sidebar:
         type=["pdf", "txt", "docx"],
     )
     
-    # 메모리 초기화 버튼
     if st.button("🗑️ 대화 기록 초기화"):
         try:
             st.session_state.memory.clear()
@@ -170,9 +167,9 @@ prompt = ChatPromptTemplate.from_messages([
 Use both the document context and conversation history to provide accurate answers. If the user asks about something we discussed before, refer to that information.
 
 Document context: {context}
-Conversation history: {history}
 
 Always answer in Korean and be helpful and informative."""),
+    MessagesPlaceholder(variable_name="history"),
     ("user", "{question}"),
 ])
 
@@ -189,30 +186,28 @@ if file:
         paint_history()
 
         def ask(question):
-            # 메모리에서 이전 대화 로드
             try:
                 memory_vars = st.session_state.memory.load_memory_variables({})
                 history = memory_vars.get("history", [])
             except Exception:
                 history = []
             
-            # 관련 문서 검색
             docs = retriever.invoke(question)
             context = docs_to_context(docs)
             
-            # 간단한 프롬프트 사용
             result = prompt.invoke({
                 "question": question, 
                 "context": context,
                 "history": history
             })
             
-            # LLM으로 답변 생성
             response = llm.invoke(result)
             
-            # 메모리에 대화 저장
             try:
-                st.session_state.memory.save_context({"input": question}, {"output": response.content})
+                st.session_state.memory.save_context(
+                    {"input": question}, 
+                    {"output": response.content}
+                )
             except Exception:
                 pass
             
