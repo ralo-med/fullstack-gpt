@@ -223,6 +223,16 @@ def split_file(file):
         docs = splitter.split_documents(docs)
         return docs
 
+@st.cache_data(show_spinner="Generating quiz...")
+def run_quiz(_docs, topic):
+    chain = {"context":questions_chain}|formatting_chain|output_parser
+    result = chain.invoke(_docs)
+    return result
+
+def run_wikipedia_quiz(topic):
+    retrieval = WikipediaRetriever(top_k_results=5, search_kwargs={"srsearch": topic})
+    docs = retrieval.get_relevant_documents(topic)
+    return docs
 
 with st.sidebar:
     docs = None
@@ -237,10 +247,7 @@ with st.sidebar:
     if choice == "Wikipedia Article":
         topic = st.text_input("Enter a topic")
         if topic:
-            retrieval = WikipediaRetriever(top_k_results=5, search_kwargs={"srsearch": topic})
-            with st.status("Searching Wikipedia..."):
-                docs = retrieval.get_relevant_documents(topic)
-                st.write(docs)
+            docs = run_wikipedia_quiz(topic)
 
 
 
@@ -261,8 +268,7 @@ else:
 
     if start:
       
-        chain = {"context":questions_chain}|formatting_chain|output_parser
-        result = chain.invoke(docs)
+        result = run_quiz(docs, topic if topic else file.name)
         st.write(result)
 
 
