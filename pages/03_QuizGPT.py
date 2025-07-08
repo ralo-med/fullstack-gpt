@@ -266,10 +266,25 @@ else:
 
     start = st.button("Generate Quiz")
 
-    if start:
-      
-        result = run_quiz(docs, topic if topic else file.name)
-        st.write(result)
+
+    result = run_quiz(docs, topic if topic else file.name)
+    with st.form("quiz_form"):
+        for question in result["questions"]:
+            st.write(question["question"])
+            value = st.radio(
+                "Select the correct answer",
+                [answer["answer"] for answer in question["answers"]],
+                key=question["question"],index=None
+            )
+            if value is not None:
+                if {"answer":value,"correct":True} in question["answers"]:
+                    st.success("Correct")
+                else:
+                    st.error("Wrong")
+    
+        submit = st.form_submit_button("Submit")
+        if submit:
+            st.write(result)
 
 
 
