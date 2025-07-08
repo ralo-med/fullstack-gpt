@@ -1,0 +1,121 @@
+import streamlit as st
+from langchain.retrievers import WikipediaRetriever
+from langchain.text_splitter import CharacterTextSplitter
+import os
+from langchain.document_loaders import UnstructuredFileLoader
+from langchain.chat_models import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate
+from langchain.callbacks import StreamingStdOutCallbackHandler
+
+llm = ChatOpenAI(model="gpt-4.1-nano", temperature=0.1, streaming=True, callbacks=[StreamingStdOutCallbackHandler()])
+
+st.set_page_config(
+    page_title="QuizGPT",
+    page_icon="🤔",
+    layout="wide",
+)
+
+st.title("QuizGPT")
+st.write("This is a quiz application built with Streamlit and OpenAI.")
+
+def format_docs(docs):
+    return "\n\n".join([doc.page_content for doc in docs])
+
+@st.cache_data(show_spinner="Splitting file..." )
+def split_file(file):
+    
+        if not os.getenv("OPENAI_API_KEY"):
+            st.error("❌ OPENAI_API_KEY 환경변수가 설정되지 않았습니다!")
+            return None
+        
+        os.makedirs("./.cache/quiz_files", exist_ok=True)
+        os.makedirs("./.cache/quiz_embeddings", exist_ok=True)
+        
+        file_content = file.read()
+        file_path = f"./.cache/quiz_files/{file.name}"
+        
+        with open(file_path, "wb") as f:
+            f.write(file_content)
+        
+
+        splitter = CharacterTextSplitter.from_tiktoken_encoder(
+            separator="\n",
+            chunk_size=600,
+            chunk_overlap=100,
+        )
+        loader = UnstructuredFileLoader(file_path, mode="elements")
+        docs = loader.load()
+        docs = splitter.split_documents(docs)
+        return docs
+
+
+with st.sidebar:
+    docs = None
+    choice = st.selectbox("Choose what you want to use",("File","Wikipedia Article"))
+
+    if choice == "File":
+        file = st.file_uploader("Upload a file", type=["pdf","txt","docx"])
+        if file:
+            st.write("File uploaded successfully")
+            docs = split_file(file)
+
+    if choice == "Wikipedia Article":
+        topic = st.text_input("Enter a topic")
+        if topic:
+            retrieval = WikipediaRetriever(top_k_results=5, search_kwargs={"srsearch": topic})
+            with st.status("Searching Wikipedia..."):
+                docs = retrieval.get_relevant_documents(topic)
+                st.write(docs)
+
+
+
+if not docs:
+     st.markdown("""Welcome to QuizGQP.           
+I will make a quiz from Wikipedia Article.              
+Get started by selecting a topic.
+                 
+""")
+
+
+else:
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                """
+    You are a helpful assistant that is role playing as a teacher.
+         
+    Based ONLY on the following context make 10 questions to test the user's knowledge about the text.
+    
+    Each question should have 4 answers, three of them must be incorrect and one should be correct.
+         
+    Use (o) to signal the correct answer.
+         
+    Question examples:
+         
+    Question: What is the color of the ocean?
+    Answers: Red|Yellow|Green|Blue(o)
+         
+    Question: What is the capital or Georgia?
+    Answers: Baku|Tbilisi(o)|Manila|Beirut
+         
+    Question: When was Avatar released?
+    Answers: 2007|2001|2009(o)|1998
+         
+    Question: Who was Julius Caesar?
+    Answers: A Roman Emperor(o)|Painter|Actor|Model
+         
+    Your turn!
+         
+    Context: {context}
+""",
+            )
+        ]
+    )
+
+    chain = {"context": format_docs} | prompt | llm
+
+    start = st.button("Generate Quiz")
+
+    if start:
+        chain.invoke(docs)
