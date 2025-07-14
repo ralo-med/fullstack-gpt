@@ -9,11 +9,43 @@ from langchain.prompts import ChatPromptTemplate
 from langchain.callbacks import StreamingStdOutCallbackHandler
 from langchain.schema import BaseOutputParser, output_parser
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.schema.runnable import RunnablePassthrough
+from langchain.embeddings import OpenAIEmbeddings
 import os
 import ssl
 import urllib3
 import certifi
+from langchain.schema.runnable import RunnableLambda
 
+llm = ChatOpenAI(model="gpt-4.1-mini", temperature=0.1)
+
+answers_prompt = ChatPromptTemplate.from_template(
+    """
+    Using ONLY the following context answer the user's question. If you can't just say you don't know, don't make anything up.
+                                                  
+    Then, give a score to the answer between 0 and 5 (ex:4.7).
+
+    If the answer answers the user question the score should be high, else it should be low.
+
+    Make sure to always include the answer's score even if it's 0.
+
+    Context: {context}
+                                                  
+    Examples:
+                                                  
+    Question: How far away is the moon?
+    Answer: The moon is 384,400 km away.
+    Score: 4.8
+                                                  
+    Question: How far away is the sun?
+    Answer: I don't know
+    Score: 0.0
+                                                  
+    Your turn!
+
+    Question: {question}
+"""
+)
 
 st.set_page_config(
     page_title="SiteGPT",
@@ -31,6 +63,16 @@ def parse_page(soup):
     elif footer:
         footer.decompose()
     return str(soup.get_text()).replace("\n", " ").replace("\xa0", " ")
+
+def get_answer(inputs):
+    docs = inputs["docs"]
+    question = inputs["question"]
+    answer_chain = answers_prompt|llm
+    answer = []
+    for doc in docs:
+        result = answer_chain.invoke({"context":doc.page_content, "question":question})
+        answer.append(result)
+    return answer
 
 @st.cache_data(show_spinner="Loading sitemap...", ttl=3600)
 def load_sitemap(url):
@@ -64,7 +106,8 @@ def load_sitemap(url):
     loader.requests_per_second = 20  # 더 빠른 속도
     docs = loader.load()
     split_docs = text_splitter.split_documents(docs)
-    return split_docs
+    vectorstore = FAISS.from_documents(split_docs, OpenAIEmbeddings())
+    return vectorstore.as_retriever()
 
 st.title("SiteGPT")
 st.write("Ask questions about the content of a website.")
@@ -85,9 +128,10 @@ if url:
             st.cache_data.clear()
         
         try:
-            docs = load_sitemap(url)
-            st.write(f"📄 로드된 문서: {len(docs)}개")
-            st.write(docs)
+            retriever = load_sitemap(url)
+            chain = {"docs":retriever, "question":RunnablePassthrough()}|RunnableLambda(get_answer)
+            st.write(f"📄 로드된 문서: {len(retriever)}개")
+            st.write(retriever)
         except Exception as e:
             st.error(f"❌ 사이트맵 로딩 중 오류가 발생했습니다: {str(e)}")
     else:
