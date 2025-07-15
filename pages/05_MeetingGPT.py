@@ -12,6 +12,10 @@ from langchain.prompts import ChatPromptTemplate
 from langchain.document_loaders import TextLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import StrOutputParser
+from langchain.vectorstores.faiss import FAISS
+from langchain.embeddings import CacheBackedEmbeddings, OpenAIEmbeddings
+from langchain.storage import LocalFileStore
+
 client = OpenAI()   
 
 has_transcript = os.path.exists("./.cache/transcript.txt")
@@ -21,6 +25,26 @@ llm = ChatOpenAI(
     model="gpt-4.1-nano",
 )
 
+splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+    chunk_size=800,
+    chunk_overlap=100,
+)
+
+
+@st.cache_resource
+def embed_file(file_path):
+    cache_dir = LocalFileStore(f"./.cache/embeddings/{file.name}")
+    splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+        chunk_size=800,
+        chunk_overlap=100,
+    )
+    loader = TextLoader(file_path)
+    docs = loader.load_and_split(text_splitter=splitter)
+    embeddings = OpenAIEmbeddings()
+    cached_embeddings = CacheBackedEmbeddings.from_bytes_store(embeddings, cache_dir)
+    vectorstore = FAISS.from_documents(docs, cached_embeddings)
+    retriever = vectorstore.as_retriever()
+    return retriever
 
 
 @st.cache_data()
@@ -188,3 +212,10 @@ if video:
                     )
                     st.write(summary)
             st.write(summary)
+
+        with qa_tab:
+            retriever = embed_file(transcript_path)
+
+            docs = retriever.invoke("do they talk about marcus aurelius?")
+
+            st.write(docs)
