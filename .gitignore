@@ -3,3 +3,4 @@ env/
 .cache/
 files/
 /files
+pill_embed_texts.csv
