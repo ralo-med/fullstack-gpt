@@ -12,6 +12,8 @@ from langchain.chat_models import ChatOpenAI
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.memory import ConversationBufferMemory
 from langchain.prompts import MessagesPlaceholder
+from dotenv import load_dotenv
+load_dotenv()
 
 st.set_page_config(
     page_title="Document GPT",

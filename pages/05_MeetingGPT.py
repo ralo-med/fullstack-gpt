@@ -15,6 +15,8 @@ from langchain.schema import StrOutputParser
 from langchain.vectorstores.faiss import FAISS
 from langchain.embeddings import CacheBackedEmbeddings, OpenAIEmbeddings
 from langchain.storage import LocalFileStore
+from dotenv import load_dotenv
+load_dotenv()
 
 client = OpenAI()   
 

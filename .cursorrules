@@ -1,0 +1,14 @@
+# Cursor Rules for Python Virtual Environment
+# Automatically activate virtual environment when opening project
+
+# Set Python interpreter to virtual environment
+python.defaultInterpreterPath: "./env/bin/python"
+
+# Auto-activate virtual environment in terminal
+terminal.integrated.env.osx: {
+    "VIRTUAL_ENV": "./env",
+    "PATH": "./env/bin:${env:PATH}"
+}
+
+# Enable automatic environment activation
+python.terminal.activateEnvironment: true 

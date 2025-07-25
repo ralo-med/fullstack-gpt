@@ -4,6 +4,9 @@
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "prettier.requireConfig": false,
   "prettier.useEditorConfig": false,
+  "python.defaultInterpreterPath": "./env/bin/python",
+  "python.terminal.activateEnvironment": true,
+  "python.terminal.activateEnvInCurrentTerminal": true,
   "[python]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnSave": true,

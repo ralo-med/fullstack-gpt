@@ -8,6 +8,8 @@ from langchain.tools import BaseTool
 from pydantic import BaseModel, Field
 from langchain.agents import initialize_agent, AgentType
 from langchain.utilities import DuckDuckGoSearchAPIWrapper
+from dotenv import load_dotenv
+load_dotenv()
 
 llm = ChatOpenAI(temperature=0.1, model_name="gpt-4.1-nano")
 

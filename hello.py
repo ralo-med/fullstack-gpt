@@ -3,6 +3,9 @@ from openai import OpenAI
 from langchain_community.utilities.duckduckgo_search import DuckDuckGoSearchAPIWrapper
 import yfinance as yf
 from ddgs import DDGS
+from dotenv import load_dotenv
+
+load_dotenv()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 def get_ticker(inputs: dict) -> str:

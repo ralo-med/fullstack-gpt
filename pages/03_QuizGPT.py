@@ -8,6 +8,8 @@ from langchain.prompts import ChatPromptTemplate
 from langchain.callbacks import StreamingStdOutCallbackHandler
 from langchain.schema import BaseOutputParser, output_parser
 import json
+from dotenv import load_dotenv
+load_dotenv()
 
 class JsonOutputParser(BaseOutputParser):
     def parse(self, text: str):
