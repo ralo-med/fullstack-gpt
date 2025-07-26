@@ -42,11 +42,8 @@ def embed_file(file_path):
     )
     loader = TextLoader(file_path)
     docs = loader.load_and_split(text_splitter=splitter)
-    embeddings = OpenAIEmbeddings()
-    cached_embeddings = CacheBackedEmbeddings.from_bytes_store(embeddings, cache_dir)
-    vectorstore = FAISS.from_documents(docs, cached_embeddings)
-    retriever = vectorstore.as_retriever()
-    return retriever
+    st.warning("⚠️ 임베딩 기능이 비활성화되었습니다.")
+    return None
 
 
 @st.cache_data()

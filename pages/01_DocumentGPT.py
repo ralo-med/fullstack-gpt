@@ -108,14 +108,8 @@ def embed_file(file):
             docs = loader.load_and_split(text_splitter=splitter)
             st.success(f"✅ {len(docs)}개의 청크로 분할 완료!")
         
-        with st.spinner("🔤 임베딩을 생성하는 중..."):
-            embeddings = OpenAIEmbeddings()
-            cached_embeddings = CacheBackedEmbeddings.from_bytes_store(embeddings, cache_dir)
-            vectorstore = FAISS.from_documents(docs, cached_embeddings)
-            retriever = vectorstore.as_retriever()
-            st.success("✅ 임베딩 생성 완료!")
-        
-        return retriever
+        st.warning("⚠️ 임베딩 기능이 비활성화되었습니다.")
+        return None
         
     except Exception as e:
         st.error(f"❌ 임베딩 생성 중 오류가 발생했습니다: {str(e)}")

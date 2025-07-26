@@ -132,8 +132,8 @@ def load_website(url):
     )
     loader.requests_per_second = 2
     docs = loader.load_and_split(text_splitter=splitter)
-    vector_store = FAISS.from_documents(docs, OpenAIEmbeddings())
-    return vector_store.as_retriever()
+    st.warning("⚠️ 임베딩 기능이 비활성화되었습니다.")
+    return None
 
 
 st.set_page_config(

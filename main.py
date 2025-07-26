@@ -11,14 +11,9 @@ from pinecone import Pinecone
 load_dotenv()
 
 pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
-# 임베딩 객체 준비 (최신 OpenAI 모델)
-embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-
-# PineconeVectorStore로 인덱스 연결 (최신 방식)
-vector_store = PineconeVectorStore(
-    index_name="recipes",
-    embedding=embeddings
-)
+# 임베딩 기능 비활성화
+embeddings = None
+vector_store = None
 
 app = FastAPI(
     title="CheftGPT. The best provider ofzxcv Indian Recipes in the world.",
@@ -44,8 +39,7 @@ class Document(BaseModel):
     },
 )
 def get_recipe(ingredient: str):
-    docs = vector_store.similarity_search(ingredient)
-    return docs
+    return [{"page_content": "임베딩 기능이 비활성화되었습니다."}]
 
 user_token_db = {"ABCDEF": "nico"}
 
